@@ -22,3 +22,4 @@ const Counter = Html.component({
 
 Layer.launch(BrowserHost.mount(Counter, {}, document.getElementById("app")!))
   .pipe(Effect.runFork)
+console.log("bundle size e2e 2")
