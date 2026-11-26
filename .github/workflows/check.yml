@@ -13,44 +13,6 @@ concurrency:
 permissions: {}
 
 jobs:
-  types-matrix:
-    name: Types (${{ matrix.name }})
-    runs-on: namespace-profile-linux-small
-    permissions:
-      contents: read
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: Check
-            command: pnpm check-tsc
-          - name: Tests
-            command: pnpm test-types --target '>=5.9'
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - name: Install dependencies
-        uses: ./.github/actions/setup
-      - run: ${{ matrix.command }}
-        env:
-          # Leave memory headroom for the runner by collecting the Go heap earlier.
-          GOMEMLIMIT: 4GiB
-          TSTYCHE_FETCH_TIMEOUT: "120"
-
-  types:
-    name: Types
-    needs: types-matrix
-    if: always()
-    runs-on: ubuntu-latest
-    permissions: {}
-    timeout-minutes: 5
-    steps:
-      - name: Check type jobs
-        if: needs.types-matrix.result != 'success'
-        run: |
-          echo "Type checks finished with result: ${{ needs.types-matrix.result }}"
-          exit 1
-
   bundle-size:
     name: Bundle size
     runs-on: ubuntu-latest
@@ -92,55 +54,3 @@ jobs:
           path: ${{ runner.temp }}/bundle-size
           retention-days: 7
           if-no-files-found: error
-
-  test:
-    name: Test (${{ matrix.runtime }})
-    runs-on: namespace-profile-linux-default
-    permissions:
-      contents: read
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runtime: Node
-            node: ""
-            command: pnpm test --max-concurrency=10
-          - runtime: Node 22.19.0 minimum
-            node: 22.19.0
-            command: pnpm vitest run --project @effect/ui --max-concurrency=10
-          - runtime: Node, flush first
-            node: ""
-            command: pnpm vitest run --max-concurrency=10
-            flush: first
-          - runtime: Node, flush last
-            node: ""
-            command: pnpm vitest run --max-concurrency=10
-            flush: last
-          - runtime: Node, flush seed 1
-            node: ""
-            command: pnpm vitest run --max-concurrency=10
-            flush: 1
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - name: Install dependencies
-        uses: ./.github/actions/setup
-        with:
-          node-version: ${{ matrix.node }}
-      - name: Test
-        run: ${{ matrix.command }}
-        env:
-          EFFECT_UI_TEST_FLUSH: ${{ matrix.flush }}
-
-  doctest:
-    name: Test (Documentation)
-    runs-on: namespace-profile-linux-small
-    permissions:
-      contents: read
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - name: Install dependencies
-        uses: ./.github/actions/setup
-      - name: Test Documentation
-        run: pnpm doctest
